@@ -62,9 +62,9 @@ class BookUpdateRequest(BaseModel):
     title: Optional[str] = None
     author: Optional[str] = None
 
-# Library ve UserManager nesnelerini oluştur
-library = Library()
-user_manager = UserManager()
+# Library ve UserManager nesnelerini oluştur (varsayılan olarak SQLite kullan)
+library = Library(db_path="app.db")
+user_manager = UserManager(db_path="app.db")
 
 # Basit token yönetimi (in-memory). Üretim için JWT önerilir.
 active_tokens: Dict[str, str] = {}
