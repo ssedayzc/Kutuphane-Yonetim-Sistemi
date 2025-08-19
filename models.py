@@ -269,16 +269,20 @@ class Library:
     
     def get_books_as_dicts(self) -> List[dict]:
         """Kitapları dictionary listesi olarak döndürür (API için)"""
+        # SQLite modunda veriler DB'de tutulduğundan, her istekte taze listeyi çek
+        if self.use_sqlite:
+            self.list_books()
         return [book.to_dict() for book in self.books]
 
     def update_book(self, isbn: str, title: Optional[str] = None, author: Optional[str] = None) -> Optional[Book]:
         """Mevcut bir kitabın başlık/yazar bilgilerini günceller"""
         normalized_isbn = self._normalize_isbn(isbn)
-        book = self.find_book(normalized_isbn)
-        if not book:
+        # Mevcut kitabı bul (SQLite'ta DB'den geliyor olabilir)
+        existing = self.find_book(normalized_isbn)
+        if not existing:
             return None
-        new_title = book.title
-        new_author = book.author
+        new_title = existing.title
+        new_author = existing.author
         if title and isinstance(title, str) and title.strip():
             new_title = title.strip()
         if author and isinstance(author, str) and author.strip():
@@ -287,15 +291,17 @@ class Library:
             with self._get_conn() as conn:
                 conn.execute("UPDATE books SET title = ?, author = ? WHERE isbn = ?", (new_title, new_author, normalized_isbn))
                 conn.commit()
-            # Bellek objesini güncelle
-            book.title = new_title
-            book.author = new_author
-            return book
+            # Bellek listesini tazele ve güncellenen kitabı döndür
+            self.list_books()
+            for b in self.books:
+                if b.isbn == normalized_isbn:
+                    return b
+            return None
         else:
-            book.title = new_title
-            book.author = new_author
+            existing.title = new_title
+            existing.author = new_author
             self.save_books()
-            return book
+            return existing
 
 
 class UserBook:

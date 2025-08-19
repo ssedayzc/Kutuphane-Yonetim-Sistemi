@@ -311,11 +311,28 @@ async def register(payload: LoginRequest):
     return {"message": "Kullanıcı oluşturuldu"}
 
 @app.post("/auth/logout", tags=["Kimlik"])
-async def logout(username: str = Depends(get_current_username), authorization: Optional[str] = Header(default=None)):
+async def logout(authorization: Optional[str] = Header(default=None)):
+    """Token ile logout yapar, token yoksa da başarılı sayılır"""
     if authorization:
         token = authorization.replace("Bearer ", "")
         active_tokens.pop(token, None)
     return {"message": "Çıkış yapıldı"}
+
+@app.get("/me", tags=["Kullanıcı"])
+async def get_current_user_info(username: str = Depends(get_current_username)):
+    """Mevcut kullanıcı bilgilerini döndürür"""
+    try:
+        user = user_manager.get_user(username)
+        if not user:
+            raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        return {
+            "username": user.username,
+            "role": user.role
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Kullanıcı bilgileri alınırken hata: {str(e)}")
 
 
 # Kullanıcı Kitap Listesi

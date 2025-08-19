@@ -128,7 +128,7 @@ class LibraryManager {
             if (response.ok) {
                 this.showStatus(`✓ Kitap başarıyla eklendi: ${data.title} by ${data.author}`, 'success', 'addBookStatus');
                 isbnInput.value = '';
-                this.loadBooks(); // Kitap listesini yenile
+                setTimeout(() => this.loadBooks(), 200); // Küçük bir gecikme ile kitapları yenile
             } else {
                 this.showStatus(`❌ ${data.detail}`, 'error', 'addBookStatus');
             }
@@ -210,11 +210,12 @@ class LibraryManager {
     // Kitapları yükle
     async loadBooks() {
         const booksListDiv = document.getElementById('booksList');
-        
+        // Kitaplar yüklenmeden önce DOM'u temizle
+        booksListDiv.innerHTML = '';
         try {
             booksListDiv.innerHTML = '<div class="loading">Kitaplar yükleniyor...</div>';
-            
-            const response = await fetch(`${this.apiBaseUrl}/books`);
+            // Cache'i tamamen devre dışı bırak
+            const response = await fetch(`${this.apiBaseUrl}/books`, { cache: 'no-store' });
             const books = await response.json();
 
             if (books.length === 0) {
@@ -231,9 +232,9 @@ class LibraryManager {
     // Kitapları göster
     displayBooks(books) {
         const booksListDiv = document.getElementById('booksList');
-        
+        const isAdmin = (this.currentRole === 'admin');
         const booksHtml = books.map(book => {
-            const adminActions = this.currentRole === 'admin' ? `
+            const adminActions = isAdmin ? `
                 <div class="book-actions">
                     <button class="btn btn-small" onclick="libraryManager.prefillEditForm('${book.isbn}','${encodeURIComponent(book.title)}','${encodeURIComponent(book.author)}')">
                         <i class="fas fa-pen"></i> Düzenle
@@ -261,7 +262,6 @@ class LibraryManager {
                 ${adminActions}
             </div>`;
         }).join('');
-
         booksListDiv.innerHTML = `<div class="books-grid">${booksHtml}</div>`;
     }
 
@@ -348,7 +348,7 @@ class LibraryManager {
             // Alanları temizle (düzenlemeden sonra)
             document.getElementById('updateTitleInput').value = '';
             document.getElementById('updateAuthorInput').value = '';
-            this.loadBooks();
+            setTimeout(() => this.loadBooks(), 200); // Küçük bir gecikme ile kitapları yenile
         } catch (e) {
             this.showStatus(`❌ ${e.message}`, 'error', 'updateBookStatus');
         } finally {
@@ -409,11 +409,9 @@ class LibraryManager {
             document.getElementById('currentUser').textContent = this.currentUser || '';
             document.getElementById('currentRole').textContent = this.currentRole || '';
             if (this.currentRole === 'admin') {
-                // Admin: yalnızca admin paneli
                 userPanel && (userPanel.style.display = 'none');
                 adminPanel && (adminPanel.style.display = 'block');
             } else {
-                // Normal kullanıcı: kullanıcı paneli
                 userPanel && (userPanel.style.display = 'block');
                 adminPanel && (adminPanel.style.display = 'none');
                 this.loadUserToRead();
@@ -425,6 +423,7 @@ class LibraryManager {
             userPanel && (userPanel.style.display = 'none');
             adminPanel && (adminPanel.style.display = 'none');
         }
+        // this.loadBooks(); // <-- Bunu kaldırdım
     }
 
     async login() {
@@ -446,6 +445,7 @@ class LibraryManager {
             this.currentUser = data.username;
             this.currentRole = data.role;
             this.setAuthUI();
+            this.loadBooks(); // Girişten hemen sonra kitapları yükle
             this.showStatus('Giriş başarılı.', 'success');
         } catch (e) {
             this.showStatus(`❌ ${e.message}`, 'error');
@@ -475,17 +475,29 @@ class LibraryManager {
 
     async logout() {
         try {
-            await fetch(`${this.apiBaseUrl}/auth/logout`, {
-                method: 'POST',
-                headers: {
-                    ...(this.authToken ? { 'Authorization': `Bearer ${this.authToken}` } : {}),
-                }
-            });
+            // Token varsa logout endpoint'ini çağır
+            if (this.authToken) {
+                await fetch(`${this.apiBaseUrl}/auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.authToken}`
+                    }
+                });
+            }
+        } catch (error) {
+            console.log('Logout API hatası (göz ardı edildi):', error);
+        }
+        
+        // Local storage'dan da temizle
+        try {
+            localStorage.removeItem('auth');
         } catch {}
+        
         this.authToken = null;
         this.currentUser = null;
         this.currentRole = null;
         this.setAuthUI();
+        this.loadBooks(); // Çıkıştan hemen sonra kitapları yükle
         this.showStatus('Çıkış yapıldı.', 'info');
     }
 
@@ -638,7 +650,22 @@ document.addEventListener('DOMContentLoaded', () => {
             libraryManager.authToken = saved.token;
             libraryManager.currentUser = saved.username;
             libraryManager.currentRole = saved.role;
-            libraryManager.setAuthUI();
+            // Token geçerli mi kontrol et
+            fetch(`${libraryManager.apiBaseUrl}/me`, {
+                headers: { 'Authorization': `Bearer ${saved.token}` }
+            })
+            .then(res => {
+                if (res.ok) {
+                    libraryManager.setAuthUI();
+                } else {
+                    // Token geçersiz, çıkış yap
+                    libraryManager.logout();
+                }
+            })
+            .catch(() => {
+                // API hatası varsa da çıkış yap
+                libraryManager.logout();
+            });
         }
     } catch {}
 });
