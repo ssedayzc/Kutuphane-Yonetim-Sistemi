@@ -14,6 +14,9 @@
 Modern, mobil uyumlu, admin ve kullanıcı rolleri olan; kişisel kitap listeleri ve Open Library entegrasyonlu bir sistem.
 
 ---
+<p align="center">
+  <img src="welcome.png" alt="Kütüphane Yönetim Sistemi Arayüzü" width="900">
+</p>
 
 ## 🎨 Tema
 Ocean Breeze paleti (projede uygulanmıştır):
