@@ -39,7 +39,8 @@ class LibraryManager {
         });
 
         // Enter tuşu ile kitap ekleme
-        document.getElementById('isbnInput').addEventListener('keypress', (e) => {
+        const addIsbnEl = document.getElementById('addIsbnInput');
+        addIsbnEl && addIsbnEl.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.addBook();
             }
@@ -51,6 +52,12 @@ class LibraryManager {
                 this.searchBook();
             }
         });
+
+        // Enter ile güncelleme (başlık/yazar alanlarında)
+        const editTitle = document.getElementById('updateTitleInput');
+        const editAuthor = document.getElementById('updateAuthorInput');
+        if (editTitle) editTitle.addEventListener('keypress', (e) => { if (e.key === 'Enter') { this.updateBook(); } });
+        if (editAuthor) editAuthor.addEventListener('keypress', (e) => { if (e.key === 'Enter') { this.updateBook(); } });
 
         // Modal kapatma
         document.querySelector('.close').addEventListener('click', () => {
@@ -87,12 +94,11 @@ class LibraryManager {
 
     // Kitap ekleme
     async addBook() {
-        const isbnInput = document.getElementById('isbnInput');
+        const isbnInput = document.getElementById('addIsbnInput');
         const isbn = isbnInput.value.trim();
-        const statusDiv = document.getElementById('addBookStatus');
 
         if (!isbn) {
-            this.showStatus('Lütfen bir ISBN numarası girin.', 'error');
+            this.showStatus('Lütfen bir ISBN numarası girin.', 'error', 'addBookStatus');
             return;
         }
 
@@ -104,7 +110,7 @@ class LibraryManager {
         }
 
         try {
-            this.showStatus('Kitap bilgileri Open Library API\'den çekiliyor...', 'info');
+            this.showStatus('Kitap bilgileri Open Library API\'den çekiliyor...', 'info', 'addBookStatus');
             
             // Admin varsa admin endpointi kullanalım, aksi halde normal endpoint (eski davranış)
             const endpoint = this.currentRole === 'admin' ? '/admin/books' : '/books';
@@ -120,15 +126,15 @@ class LibraryManager {
             const data = await response.json();
 
             if (response.ok) {
-                this.showStatus(`✓ Kitap başarıyla eklendi: ${data.title} by ${data.author}`, 'success');
+                this.showStatus(`✓ Kitap başarıyla eklendi: ${data.title} by ${data.author}`, 'success', 'addBookStatus');
                 isbnInput.value = '';
                 this.loadBooks(); // Kitap listesini yenile
             } else {
-                this.showStatus(`❌ ${data.detail}`, 'error');
+                this.showStatus(`❌ ${data.detail}`, 'error', 'addBookStatus');
             }
         } catch (error) {
             console.error('Kitap ekleme hatası:', error);
-            this.showStatus('❌ Kitap eklenirken bir hata oluştu. Lütfen tekrar deneyin.', 'error');
+            this.showStatus('❌ Kitap eklenirken bir hata oluştu. Lütfen tekrar deneyin.', 'error', 'addBookStatus');
         }
     }
 
@@ -170,8 +176,11 @@ class LibraryManager {
     // Arama sonucunu göster
     displaySearchResult(book) {
         const resultDiv = document.getElementById('searchResult');
-        const deleteBtn = this.currentRole === 'admin' ? `
+        const adminActions = this.currentRole === 'admin' ? `
             <div class="book-actions">
+                <button class="btn btn-small" onclick="libraryManager.prefillEditForm('${book.isbn}','${encodeURIComponent(book.title)}','${encodeURIComponent(book.author)}')">
+                    <i class="fas fa-pen"></i> Düzenle
+                </button>
                 <button class="btn btn-small btn-danger" onclick="libraryManager.showDeleteModal('${book.isbn}', '${book.title}', '${book.author}')">
                     <i class="fas fa-trash"></i> Sil
                 </button>
@@ -192,7 +201,7 @@ class LibraryManager {
                         <span>${book.isbn}</span>
                     </div>
                 </div>
-                ${deleteBtn}
+                ${adminActions}
             </div>`;
         resultDiv.style.display = 'block';
         resultDiv.classList.add('show');
@@ -224,8 +233,11 @@ class LibraryManager {
         const booksListDiv = document.getElementById('booksList');
         
         const booksHtml = books.map(book => {
-            const deleteBtn = this.currentRole === 'admin' ? `
+            const adminActions = this.currentRole === 'admin' ? `
                 <div class="book-actions">
+                    <button class="btn btn-small" onclick="libraryManager.prefillEditForm('${book.isbn}','${encodeURIComponent(book.title)}','${encodeURIComponent(book.author)}')">
+                        <i class="fas fa-pen"></i> Düzenle
+                    </button>
                     <button class="btn btn-small btn-danger" onclick="libraryManager.showDeleteModal('${book.isbn}', '${book.title}', '${book.author}')">
                         <i class="fas fa-trash"></i> Sil
                     </button>
@@ -246,7 +258,7 @@ class LibraryManager {
                         <span>${book.isbn}</span>
                     </div>
                 </div>
-                ${deleteBtn}
+                ${adminActions}
             </div>`;
         }).join('');
 
@@ -311,12 +323,17 @@ class LibraryManager {
     }
 
     async updateBook() {
-        if (this.currentRole !== 'admin') { this.showStatus('Bu işlem için admin gerekli.', 'error'); return; }
-        const isbn = (document.getElementById('isbnInput').value || '').trim();
-        const title = (document.getElementById('editTitleInput').value || '').trim();
-        const author = (document.getElementById('editAuthorInput').value || '').trim();
-        if (!isbn) { this.showStatus('ISBN gerekli', 'error'); return; }
+        if (this.currentRole !== 'admin') { this.showStatus('Bu işlem için admin gerekli.', 'error', 'updateBookStatus'); return; }
+        const updateBtn = document.getElementById('updateBookBtn');
+        const isbnRaw = (document.getElementById('updateIsbnInput').value || '').trim();
+        const isbn = isbnRaw.replace(/[-.\s_]/g, '').toUpperCase();
+        const title = (document.getElementById('updateTitleInput').value || '').trim();
+        const author = (document.getElementById('updateAuthorInput').value || '').trim();
+        if (!isbn) { this.showStatus('ISBN gerekli', 'error', 'updateBookStatus'); return; }
+        if (isbn.length < 10) { this.showStatus('Geçersiz ISBN formatı! ISBN en az 10 karakter olmalıdır.', 'error', 'updateBookStatus'); return; }
+        if (!title && !author) { this.showStatus('Güncellenecek alan yok. Başlık veya yazar girin.', 'error', 'updateBookStatus'); return; }
         try {
+            updateBtn && (updateBtn.disabled = true);
             const res = await fetch(`${this.apiBaseUrl}/admin/books/${isbn}`, {
                 method: 'PATCH',
                 headers: {
@@ -327,18 +344,42 @@ class LibraryManager {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Güncelleme başarısız');
-            this.showStatus('Kitap güncellendi.', 'success');
+            this.showStatus('✓ Kitap güncellendi.', 'success', 'updateBookStatus');
+            // Alanları temizle (düzenlemeden sonra)
+            document.getElementById('updateTitleInput').value = '';
+            document.getElementById('updateAuthorInput').value = '';
             this.loadBooks();
         } catch (e) {
-            this.showStatus(`❌ ${e.message}`, 'error');
+            this.showStatus(`❌ ${e.message}`, 'error', 'updateBookStatus');
+        } finally {
+            updateBtn && (updateBtn.disabled = false);
+        }
+    }
+
+    // Admin düzenleme formunu doldur
+    prefillEditForm(isbn, encTitle = '', encAuthor = '') {
+        if (this.currentRole !== 'admin') { return; }
+        try {
+            const title = encTitle ? decodeURIComponent(encTitle) : '';
+            const author = encAuthor ? decodeURIComponent(encAuthor) : '';
+            const isbnInput = document.getElementById('updateIsbnInput');
+            const titleInput = document.getElementById('updateTitleInput');
+            const authorInput = document.getElementById('updateAuthorInput');
+            if (isbnInput) isbnInput.value = isbn || '';
+            if (titleInput) titleInput.value = title;
+            if (authorInput) authorInput.value = author;
+            this.showStatus('Düzenleme için alanlar dolduruldu.', 'info', 'updateBookStatus');
+        } catch {
+            // yoksay
         }
     }
 
     // Durum mesajı göster
-    showStatus(message, type = 'info') {
-        const statusDiv = document.getElementById('addBookStatus');
+    showStatus(message, type = 'info', targetId = 'addBookStatus') {
+        const statusDiv = document.getElementById(targetId) || document.getElementById('addBookStatus');
         statusDiv.textContent = message;
         statusDiv.className = `status-message ${type}`;
+        statusDiv.style.display = 'block';
         
         // 5 saniye sonra mesajı gizle
         setTimeout(() => {

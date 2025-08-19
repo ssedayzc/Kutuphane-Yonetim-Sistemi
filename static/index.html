@@ -55,22 +55,30 @@
                 </div>
             </section>
 
-            <!-- Admin Panel: Add Book Section -->
+            <!-- Admin Panel: Add & Update Sections -->
             <section id="adminPanel" class="add-book-section" style="display:none;">
                 <div class="card">
-                    <h2><i class="fas fa-plus-circle"></i> Yeni Kitap Ekle / Düzenle</h2>
+                    <h2><i class="fas fa-plus-circle"></i> Yeni Kitap Ekle</h2>
                     <div class="input-group">
-                        <input type="text" id="isbnInput" placeholder="ISBN numarasını girin (örn: 978-0-441-17271-9)" class="form-input">
+                        <input type="text" id="addIsbnInput" placeholder="ISBN numarasını girin (örn: 978-0-441-17271-9)" class="form-input">
                         <button id="addBookBtn" class="btn btn-primary">
                             <i class="fas fa-search"></i> Kitap Ara ve Ekle
                         </button>
                     </div>
+                    <div id="addBookStatus" class="status-message"></div>
+                </div>
+
+                <div class="card">
+                    <h2><i class="fas fa-pen"></i> Kitap Güncelle</h2>
                     <div class="input-group">
-                        <input type="text" id="editTitleInput" placeholder="Yeni başlık (opsiyonel)" class="form-input">
-                        <input type="text" id="editAuthorInput" placeholder="Yeni yazar (opsiyonel)" class="form-input">
+                        <input type="text" id="updateIsbnInput" placeholder="Güncellenecek kitabın ISBN'i" class="form-input">
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="updateTitleInput" placeholder="Yeni başlık (opsiyonel)" class="form-input">
+                        <input type="text" id="updateAuthorInput" placeholder="Yeni yazar (opsiyonel)" class="form-input">
                         <button id="updateBookBtn" class="btn btn-secondary"><i class="fas fa-pen"></i> Güncelle</button>
                     </div>
-                    <div id="addBookStatus" class="status-message"></div>
+                    <div id="updateBookStatus" class="status-message"></div>
                 </div>
             </section>
 
