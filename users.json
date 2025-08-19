@@ -1,0 +1,34 @@
+[
+  {
+    "username": "admin",
+    "password_hash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+    "role": "admin",
+    "books": [
+      {
+        "title": "Dune",
+        "author": "Frank Herbert",
+        "isbn": "9780441172719",
+        "is_read": true
+      }
+    ]
+  },
+  {
+    "username": "demo",
+    "password_hash": "d3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791",
+    "role": "user",
+    "books": [
+      {
+        "title": "The Hitchhiker's Guide to the Galaxy",
+        "author": "Bilinmeyen Yazar",
+        "isbn": "9780345391803",
+        "is_read": true
+      },
+      {
+        "title": "Dune",
+        "author": "Frank Herbert",
+        "isbn": "9780441172719",
+        "is_read": false
+      }
+    ]
+  }
+]
